@@ -1,1 +1,1 @@
-# pump-or-dump
+# Pump or Dump
