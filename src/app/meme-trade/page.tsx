@@ -47,22 +47,22 @@ export default function MemeTrade() {
 
             {/* Trading Buttons */}
             <div className="grid grid-cols-2 gap-2">
-              <Button 
+              <Button
+                onClick={() => handleTradeClick('PUMP')}
+                className="w-full p-6 text-white"
                 style={buttonStyles.pump}
-                className="p-6 text-white"
                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = buttonStyles.pumpHover.backgroundColor}
                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = buttonStyles.pump.backgroundColor}
-                onClick={() => handleTradeClick('PUMP')}
               >
                 <TrendingUp className="mr-2" />
                 PUMP
               </Button>
-              <Button 
+              <Button
+                onClick={() => handleTradeClick('DUMP')}
+                className="w-full p-6 text-white"
                 style={buttonStyles.dump}
-                className="p-6 text-white"
                 onMouseOver={(e) => e.currentTarget.style.backgroundColor = buttonStyles.dumpHover.backgroundColor}
                 onMouseOut={(e) => e.currentTarget.style.backgroundColor = buttonStyles.dump.backgroundColor}
-                onClick={() => handleTradeClick('DUMP')}
               >
                 <TrendingDown className="mr-2" />
                 DUMP
