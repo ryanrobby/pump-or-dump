@@ -14,7 +14,7 @@ export interface Position {
 interface TradingControlsProps {
   currentPrice: number;
   onTrade: (type: 'PUMP' | 'DUMP', amount: number) => void;
-  onCashOut: (position: Position) => void;
+  onCashOut: (position: Position, positions?: Position[]) => void;
   showCashOutModal: boolean;
 }
 
@@ -82,9 +82,7 @@ export default function TradingControls({
   const handleCashOutAll = () => {
     const allPositions = [...positions];
     setPositions([]);
-    allPositions.forEach(position => {
-      onCashOut(position);
-    });
+    onCashOut(allPositions[0], allPositions); // Pass first position and all positions
   };
 
   return (

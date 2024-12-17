@@ -21,6 +21,7 @@ export default function Home() {
   const [phase, setPhase] = React.useState('trending');
   const [showCashOutModal, setShowCashOutModal] = React.useState(false);
   const [selectedPosition, setSelectedPosition] = React.useState<Position | null>(null);
+  const [allPositions, setAllPositions] = React.useState<Position[]>([]);
 
   const calculatePriceImpact = (isPump: boolean) => {
     const baseImpact = isPump ? 0.01 : -0.01;
@@ -47,8 +48,9 @@ export default function Home() {
     setPoolSize(prev => prev + amount);
   };
 
-  const handleCashOut = (position: Position) => {
+  const handleCashOut = (position: Position, positions?: Position[]) => {
     setSelectedPosition(position);
+    setAllPositions(positions || []);
     setShowCashOutModal(true);
   };
 
@@ -64,6 +66,7 @@ export default function Home() {
       
       setShowCashOutModal(false);
       setSelectedPosition(null);
+      setAllPositions([]);
     }
   };
 
@@ -126,21 +129,51 @@ export default function Home() {
             <AlertDialogTitle className="text-xl">Confirm Cash Out</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
-                {selectedPosition && (
+                {allPositions.length > 1 ? (
                   <>
-                    <p>Are you sure you want to cash out this position?</p>
-                    <p className="mt-2 font-medium">
-                      Total: ${calculatePositionValue(selectedPosition).toFixed(2)}
-                    </p>
-                    <p className={`mt-1 font-medium ${
-                      calculatePositionValue(selectedPosition) >= selectedPosition.amount 
-                        ? "text-green-600" 
-                        : "text-red-600"
-                    }`}>
-                      {calculatePositionValue(selectedPosition) >= selectedPosition.amount ? "Profit: " : "Loss: "}
-                      ${Math.abs(calculatePositionValue(selectedPosition) - selectedPosition.amount).toFixed(2)}
-                    </p>
+                    <p>Are you sure you want to cash out all positions?</p>
+                    {(() => {
+                      const totalInvested = allPositions.reduce((sum, pos) => sum + pos.amount, 0);
+                      const totalValue = allPositions.reduce((sum, pos) => sum + calculatePositionValue(pos), 0);
+                      const pnl = totalValue - totalInvested;
+                      const pnlPercent = ((totalValue - totalInvested) / totalInvested) * 100;
+                      
+                      return (
+                        <>
+                          <p className="mt-2 font-medium">
+                            Total Cash Out: ${totalValue.toFixed(2)}
+                          </p>
+                          <p className={`mt-1 font-medium ${pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {pnl >= 0 ? "Total Profit: " : "Total Loss: "}
+                            ${Math.abs(pnl).toFixed(2)} ({pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(1)}%)
+                          </p>
+                        </>
+                      );
+                    })()}
                   </>
+                ) : (
+                  selectedPosition && (
+                    <>
+                      <p>Are you sure you want to cash out this position?</p>
+                      {(() => {
+                        const posValue = calculatePositionValue(selectedPosition);
+                        const pnl = posValue - selectedPosition.amount;
+                        const pnlPercent = ((posValue - selectedPosition.amount) / selectedPosition.amount) * 100;
+                        
+                        return (
+                          <>
+                            <p className="mt-2 font-medium">
+                              Total: ${posValue.toFixed(2)}
+                            </p>
+                            <p className={`mt-1 font-medium ${pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {pnl >= 0 ? "Profit: " : "Loss: "}
+                              ${Math.abs(pnl).toFixed(2)} ({pnlPercent >= 0 ? "+" : ""}{pnlPercent.toFixed(1)}%)
+                            </p>
+                          </>
+                        );
+                      })()}
+                    </>
+                  )
                 )}
               </div>
             </AlertDialogDescription>
