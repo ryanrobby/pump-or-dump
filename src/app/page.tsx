@@ -2,8 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";  
 import { Zap } from 'lucide-react';
-import TradingControls from '@/components/TradingControls';
-import type { Position } from '@/components/TradingControls';
+import TradingControls, { Position } from '@/components/TradingControls';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -24,9 +23,9 @@ export default function Home() {
   const [selectedPosition, setSelectedPosition] = React.useState<Position | null>(null);
 
   const calculatePriceImpact = (isPump: boolean) => {
-    const baseImpact = isPump ? 1 : -1;
-    const multiplier = phase === 'trending' ? 0.05 :
-                      phase === 'revival' ? 0.03 : 0.01;
+    const baseImpact = isPump ? 0.01 : -0.01;
+    const multiplier = phase === 'trending' ? 5 :
+                      phase === 'revival' ? 3 : 1;
     const sentimentMultiplier = (pumpPercentage / 50) - 1;
     return baseImpact * multiplier * (1 + sentimentMultiplier);
   };
@@ -37,6 +36,17 @@ export default function Home() {
       : position.amount * (2 - price / position.entryPrice);
   };
 
+  const handleTrade = (type: 'PUMP' | 'DUMP', amount: number) => {
+    const impact = calculatePriceImpact(type === 'PUMP');
+    setPrice(prev => prev * (1 + impact));
+    setPumpPercentage(prev => 
+      type === 'PUMP' 
+        ? Math.min(100, prev + 1) 
+        : Math.max(0, prev - 1)
+    );
+    setPoolSize(prev => prev + amount);
+  };
+
   const handleCashOut = (position: Position) => {
     setSelectedPosition(position);
     setShowCashOutModal(true);
@@ -44,13 +54,15 @@ export default function Home() {
 
   const confirmCashOut = () => {
     if (selectedPosition) {
-      setPoolSize(prev => prev - calculatePositionValue(selectedPosition));
+      const positionValue = calculatePositionValue(selectedPosition);
+      setPoolSize(prev => prev - positionValue);
       setShowCashOutModal(false);
+      setSelectedPosition(null);
     }
   };
 
   return (
-    <div className="relative min-h-screen pb-16">
+    <main className="min-h-screen bg-gray-50">
       <div className="max-w-md mx-auto px-4 py-8 space-y-4">
         <Card className="bg-white shadow-lg overflow-hidden rounded-[25px]">
           <CardContent className="space-y-6 pt-6">
@@ -58,12 +70,15 @@ export default function Home() {
               <div className="flex items-center">
                 <Zap className="text-purple-600 mr-2" />
                 <span className="font-semibold text-purple-800">
-                  Trending 🔥
+                  {phase === 'trending' ? 'Trending 🔥' : 
+                   phase === 'revival' ? 'Revival 🚀' : 'Stable 💎'}
                 </span>
               </div>
-              <div className="text-sm text-purple-700">
-                23:45:30 left
-              </div>
+              {phase !== 'stable' && (
+                <div className="text-sm text-purple-700">
+                  23:45:30 left
+                </div>
+              )}
             </div>
 
             <div className="w-full bg-black overflow-hidden">
@@ -91,43 +106,47 @@ export default function Home() {
 
             <TradingControls
               currentPrice={price}
-              onTrade={(type, amount) => {
-                const impact = calculatePriceImpact(type === 'PUMP');  
-                setPrice(prev => prev * (1 + impact));
-                setPumpPercentage(prev => 
-                  type === 'PUMP' 
-                    ? Math.min(100, prev + 1) 
-                    : Math.max(0, prev - 1)
-                );
-                setPoolSize(prev => prev + amount);
-              }}
+              onTrade={handleTrade}
               onCashOut={handleCashOut}
             />
           </CardContent>
         </Card>
-
-        <AlertDialog open={showCashOutModal} onOpenChange={setShowCashOutModal}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Cash Out</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to cash out this position?
-                <br />
-                {selectedPosition && (
-                  <span className={calculatePositionValue(selectedPosition) >= selectedPosition.amount ? "text-green-600" : "text-red-600"}>
-                    {calculatePositionValue(selectedPosition) >= selectedPosition.amount ? "Profit" : "Loss"}: 
-                    ${(calculatePositionValue(selectedPosition) - selectedPosition.amount).toFixed(2)}
-                  </span>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmCashOut}>Cash Out</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
-    </div>
+
+      <AlertDialog open={showCashOutModal} onOpenChange={setShowCashOutModal}>
+        <AlertDialogContent className="bg-white rounded-xl relative z-50">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">Confirm Cash Out</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                {selectedPosition && (
+                  <>
+                    Are you sure you want to cash out this position?
+                    <p className="mt-2 text-lg font-semibold">
+                      Total: ${calculatePositionValue(selectedPosition).toFixed(2)}
+                    </p>
+                    <p className={`mt-1 font-medium ${calculatePositionValue(selectedPosition) >= selectedPosition.amount ? "text-green-600" : "text-red-600"}`}>
+                      {calculatePositionValue(selectedPosition) >= selectedPosition.amount ? "Profit: " : "Loss: "}
+                      ${Math.abs(calculatePositionValue(selectedPosition) - selectedPosition.amount).toFixed(2)}
+                    </p>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-lg border border-gray-200">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmCashOut}
+              className="rounded-lg bg-blue-500 hover:bg-blue-600 text-white"
+            >
+              Confirm Cash Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </main>
   );
 }

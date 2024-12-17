@@ -1,9 +1,15 @@
-// At the top of TradingControls/index.tsx
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 
+export interface Position {
+  id: number;
+  type: 'PUMP' | 'DUMP';
+  amount: number;
+  entryPrice: number;
+  timestamp: Date;
+}
 
 interface TradingControlsProps {
   currentPrice: number;
@@ -11,11 +17,11 @@ interface TradingControlsProps {
   onCashOut: (position: Position) => void;
 }
 
-const TradingControls: React.FC<TradingControlsProps> = ({ currentPrice, onTrade, onCashOut }) => {
+export default function TradingControls({ currentPrice, onTrade, onCashOut }: TradingControlsProps) {
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [tradeAmount, setTradeAmount] = useState('100');
-  const [pendingTradeType, setPendingTradeType] = useState<'PUMP' | 'DUMP' | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [pendingTradeType, setPendingTradeType] = useState<'PUMP' | 'DUMP' | null>(null);
 
   const buttonStyles = {
     pump: { backgroundColor: '#1a1a1a' },
@@ -32,63 +38,106 @@ const TradingControls: React.FC<TradingControlsProps> = ({ currentPrice, onTrade
 
   const handleConfirmTrade = () => {
     const amount = parseFloat(tradeAmount);
-    if (!amount || amount <= 0) return;
-    
+    if (!amount || amount <= 0 || !pendingTradeType) return;
+
     const newPosition: Position = {
       id: Date.now(),
-      type: pendingTradeType!,
+      type: pendingTradeType,
       amount,
       entryPrice: currentPrice,
       timestamp: new Date()
     };
 
     setPositions([...positions, newPosition]);
-    onTrade(pendingTradeType!, amount);
     setShowTradeForm(false);
+    onTrade(pendingTradeType, amount);
   };
 
   const calculatePositionValue = (position: Position) => {
-    return position.type === 'PUMP'
-      ? position.amount * (currentPrice / position.entryPrice)
-      : position.amount * (2 - currentPrice / position.entryPrice);
+    if (position.type === 'PUMP') {
+      return position.amount * (currentPrice / position.entryPrice);
+    }
+    return position.amount * (2 - (currentPrice / position.entryPrice));
   };
 
   return (
     <div className="space-y-4">
-      {/* Trading Buttons */}
       <div className="grid grid-cols-2 gap-2">
-        <Button
-          onClick={() => handleTradeClick('PUMP')}
-          className="w-full"
+        <Button 
           style={buttonStyles.pump}
+          className="p-6 text-white flex items-center justify-center"
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = buttonStyles.pumpHover.backgroundColor}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = buttonStyles.pump.backgroundColor}
+          onClick={() => handleTradeClick('PUMP')}
         >
           <TrendingUp className="mr-2" />
           PUMP
         </Button>
-        <Button
-          onClick={() => handleTradeClick('DUMP')}
-          className="w-full"
+        <Button 
           style={buttonStyles.dump}
+          className="p-6 text-white flex items-center justify-center"
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = buttonStyles.dumpHover.backgroundColor}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = buttonStyles.dump.backgroundColor}
+          onClick={() => handleTradeClick('DUMP')}
         >
           <TrendingDown className="mr-2" />
           DUMP
         </Button>
       </div>
 
-      {/* Trade Form */}
       {showTradeForm && (
         <div className="p-4 bg-gray-50 rounded-lg space-y-4">
-          {/* ... */}
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between mb-2">
+                <label className="text-sm font-medium">Position Size</label>
+                <span className="text-sm text-gray-600">Price: ${currentPrice.toFixed(3)}</span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <Input
+                  type="number"
+                  value={tradeAmount}
+                  onChange={(e) => setTradeAmount(e.target.value)}
+                  className="pl-7"
+                  placeholder="Enter amount..."
+                  min="0"
+                />
+              </div>
+            </div>
+            <div className="text-sm">
+              {pendingTradeType === 'PUMP' ? (
+                "Make money when others PUMP it 📈"
+              ) : (
+                "Make money when others DUMP it 📉"
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowTradeForm(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleConfirmTrade}
+                className="w-full text-white"
+                style={pendingTradeType === 'PUMP' ? buttonStyles.pump : buttonStyles.dump}
+                disabled={!tradeAmount || parseFloat(tradeAmount) <= 0}
+              >
+                {pendingTradeType} IT
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Positions */}
       {positions.length > 0 && (
         <div className="p-4 bg-gray-50 rounded-lg space-y-4">
           <div className="flex justify-between items-center">
             <div className="text-lg font-semibold">Your Positions</div>
           </div>
-          
           <div className="space-y-3">
             {positions.map((position) => {
               const posValue = calculatePositionValue(position);
@@ -110,7 +159,10 @@ const TradingControls: React.FC<TradingControlsProps> = ({ currentPrice, onTrade
                     </span>
                     <Button
                       size="sm"
-                      onClick={() => onCashOut(position)}
+                      onClick={() => {
+                        onCashOut(position);
+                        setPositions(positions.filter(p => p.id !== position.id));
+                      }}
                       className="bg-blue-500 hover:bg-blue-600 text-white text-sm"
                     >
                       Cash Out
@@ -124,14 +176,4 @@ const TradingControls: React.FC<TradingControlsProps> = ({ currentPrice, onTrade
       )}
     </div>
   );
-};
-
-export default TradingControls;
-
-export type Position = {
-    id: number;
-    type: 'PUMP' | 'DUMP';
-    amount: number;
-    entryPrice: number;
-    timestamp: Date;
-  };
+}
