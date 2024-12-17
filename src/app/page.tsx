@@ -56,6 +56,12 @@ export default function Home() {
     if (selectedPosition) {
       const positionValue = calculatePositionValue(selectedPosition);
       setPoolSize(prev => prev - positionValue);
+      
+      const event = new CustomEvent('positionClosed', {
+        detail: { id: selectedPosition.id }
+      });
+      document.dispatchEvent(event);
+      
       setShowCashOutModal(false);
       setSelectedPosition(null);
     }
@@ -108,24 +114,29 @@ export default function Home() {
               currentPrice={price}
               onTrade={handleTrade}
               onCashOut={handleCashOut}
+              showCashOutModal={showCashOutModal}
             />
           </CardContent>
         </Card>
       </div>
 
       <AlertDialog open={showCashOutModal} onOpenChange={setShowCashOutModal}>
-        <AlertDialogContent className="bg-white rounded-xl relative z-50">
+        <AlertDialogContent className="bg-white rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl">Confirm Cash Out</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div>
                 {selectedPosition && (
                   <>
-                    Are you sure you want to cash out this position?
-                    <p className="mt-2 text-lg font-semibold">
+                    <p>Are you sure you want to cash out this position?</p>
+                    <p className="mt-2 font-medium">
                       Total: ${calculatePositionValue(selectedPosition).toFixed(2)}
                     </p>
-                    <p className={`mt-1 font-medium ${calculatePositionValue(selectedPosition) >= selectedPosition.amount ? "text-green-600" : "text-red-600"}`}>
+                    <p className={`mt-1 font-medium ${
+                      calculatePositionValue(selectedPosition) >= selectedPosition.amount 
+                        ? "text-green-600" 
+                        : "text-red-600"
+                    }`}>
                       {calculatePositionValue(selectedPosition) >= selectedPosition.amount ? "Profit: " : "Loss: "}
                       ${Math.abs(calculatePositionValue(selectedPosition) - selectedPosition.amount).toFixed(2)}
                     </p>

@@ -15,13 +15,27 @@ interface TradingControlsProps {
   currentPrice: number;
   onTrade: (type: 'PUMP' | 'DUMP', amount: number) => void;
   onCashOut: (position: Position) => void;
+  showCashOutModal: boolean;
 }
 
-export default function TradingControls({ currentPrice, onTrade, onCashOut }: TradingControlsProps) {
+export default function TradingControls({ 
+  currentPrice, 
+  onTrade, 
+  onCashOut,
+  showCashOutModal 
+}: TradingControlsProps) {
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [tradeAmount, setTradeAmount] = useState('100');
   const [positions, setPositions] = useState<Position[]>([]);
   const [pendingTradeType, setPendingTradeType] = useState<'PUMP' | 'DUMP' | null>(null);
+  const [cashingOut, setCashingOut] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!showCashOutModal && cashingOut !== null) {
+      setPositions(prev => prev.filter(p => p.id !== cashingOut));
+      setCashingOut(null);
+    }
+  }, [showCashOutModal, cashingOut]);
 
   const buttonStyles = {
     pump: { backgroundColor: '#1a1a1a' },
@@ -58,6 +72,19 @@ export default function TradingControls({ currentPrice, onTrade, onCashOut }: Tr
       return position.amount * (currentPrice / position.entryPrice);
     }
     return position.amount * (2 - (currentPrice / position.entryPrice));
+  };
+
+  const handlePositionCashOut = (position: Position) => {
+    setCashingOut(position.id);
+    onCashOut(position);
+  };
+
+  const handleCashOutAll = () => {
+    const allPositions = [...positions];
+    setPositions([]);
+    allPositions.forEach(position => {
+      onCashOut(position);
+    });
   };
 
   return (
@@ -159,10 +186,7 @@ export default function TradingControls({ currentPrice, onTrade, onCashOut }: Tr
                     </span>
                     <Button
                       size="sm"
-                      onClick={() => {
-                        onCashOut(position);
-                        setPositions(positions.filter(p => p.id !== position.id));
-                      }}
+                      onClick={() => handlePositionCashOut(position)}
                       className="bg-blue-500 hover:bg-blue-600 text-white text-sm"
                     >
                       Cash Out
@@ -171,6 +195,14 @@ export default function TradingControls({ currentPrice, onTrade, onCashOut }: Tr
                 </div>
               );
             })}
+            {positions.length > 1 && (
+              <Button
+                onClick={handleCashOutAll}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white mt-4"
+              >
+                Cash Out All Positions
+              </Button>
+            )}
           </div>
         </div>
       )}
